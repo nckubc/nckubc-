@@ -118,12 +118,12 @@
         <div class="bg-white rounded-2xl max-w-sm w-full mx-4 p-6 shadow-2xl border border-pastel-200 text-center space-y-4">
             <h4 id="alert-title" class="font-bold text-pastel-900 text-base">提示</h4>
             <p id="alert-message" class="text-sm text-pastel-600"></p>
-            <button onclick="closeAlert()" class="w-full py-2.5 rounded-xl bg-pastel-800 text-pastel-100 text-sm font-medium hover:bg-pastel-955">確定</button>
+            <button onclick="closeAlert()" class="w-full py-2.5 rounded-xl bg-pastel-800 text-pastel-100 text-sm font-medium hover:bg-pastel-950">確定</button>
         </div>
     </div>
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -138,7 +138,9 @@
         };
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'ncku-baseball-shortcuts';
-        const app = initializeApp(firebaseConfig);
+        
+        // 防呆機制：若已經初始化過則直接抓取現有 app，避免重複初始化錯誤
+        const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
         const auth = getAuth(app);
         const db = getFirestore(app);
 
@@ -172,7 +174,6 @@
             if (!user) return;
             document.getElementById('auth-status').innerText = "雲端同步已連線";
             
-            // RULE 1: Public shared collection path
             const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'shortcuts');
             
             if (unsubscribe) unsubscribe();
@@ -191,7 +192,6 @@
 
         initAuth();
 
-        // Render shortcuts vertical list
         window.renderShortcuts = function() {
             const container = document.getElementById('shortcuts-list');
             
@@ -243,7 +243,6 @@
             }
         }
 
-        // Modal Controls
         window.openModal = function() {
             document.getElementById('modal-title').innerText = '新增捷徑';
             document.getElementById('edit-id').value = '';
@@ -311,4 +310,19 @@
                 showAlert("儲存失敗", "無法儲存至雲端資料庫，請檢查網路連線。");
             }
         }
+
+        window.deleteShortcut = async function(id) {
+            if (confirm('確定要刪除這個捷徑嗎？')) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'shortcuts', id);
+                    await deleteDoc(docRef);
+                } catch (err) {
+                    console.error("Delete error:", err);
+                    showAlert("刪除失敗", "無法從雲端刪除資料。");
+                }
+            }
+        }
+    </script>
+</body>
+</html>
 
